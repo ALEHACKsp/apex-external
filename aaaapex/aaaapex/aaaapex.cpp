@@ -6,7 +6,7 @@ DWORD g_PID;
 uint64_t g_Base;
 bool g_Locked;
 
-#define SMOOTH 2
+//#define SMOOTH 2.0f
 
 Vector GetEntityBasePosition(uintptr_t ent)
 {
@@ -34,6 +34,11 @@ Vector GetEntityBonePosition(uintptr_t ent, uint32_t BoneId, Vector BasePosition
 Vector GetViewAngles(uintptr_t ent) 
 {
 	return driver::read<Vector>(g_Sock, g_PID, ent + OFFSET_VIEWANGLES);
+}
+
+QAngle GetViewAnglesA(uintptr_t ent)
+{
+	return driver::read<QAngle>(g_Sock, g_PID, ent + OFFSET_VIEWANGLES);
 }
 
 void SetViewAngles(uintptr_t ent, Vector angles)
@@ -64,7 +69,7 @@ uint64_t aimentity = 0;
 void aimthread() 
 {	
 	while (true) 
-	{
+	{		
 		if (!(GetKeyState(0x06) & 0x8000)) 
 		{
 			Sleep(10);
@@ -80,9 +85,12 @@ void aimthread()
 		Vector ViewAngles = GetViewAngles(localent);
 		Vector FeetPosition = GetEntityBasePosition(aimentity);
 		Vector HeadPosition = GetEntityBonePosition(aimentity, 8, FeetPosition);
-		Vector CalculatedAngles = *(Vector*)(&(Math::CalcAngle(LocalCamera, HeadPosition)));
+		QAngle angle = Math::CalcAngle(LocalCamera, HeadPosition);
+		//Math::ClampAngles(angle);
+		Vector CalculatedAngles = *(Vector*)(&(angle));
 
-		Vector Delta = (CalculatedAngles - ViewAngles) / SMOOTH;
+		Vector Delta = (CalculatedAngles - ViewAngles); // / SMOOTH;
+		Vector puredelta = CalculatedAngles - ViewAngles;
 		Vector SmoothedAngles = ViewAngles + Delta;
 
 		SetViewAngles(localent, SmoothedAngles);
@@ -153,12 +161,22 @@ int main()
 		}
 
 		Vector vec = { 0, 0, 0 };
-		for (int i = 1; i <= 100; i++) // TODO: Check if 1 is local
+		float max = 999.0f;
+		for (int i = 0; i <= 150; i++) // TODO: Check if 1 is local
 		{			
 			// ---------------------------------------------------------------
 			// ENTITY BASE CODE	
 			// ---------------------------------------------------------------
 			uint64_t centity = driver::read<uint64_t>(g_Sock, g_PID, entitylist + ((uint64_t)i << 5));
+
+			// ---------------------------------------------------------------
+			// INDENTIFICATION
+			// ---------------------------------------------------------------	
+			uint64_t name = driver::read<uint64_t>(g_Sock, g_PID, centity + OFFSET_NAME);
+			if (name != 125780153691248)  // "player.."
+			{
+				continue;
+			}
 
 			// ---------------------------------------------------------------
 			// ENGINE GLOW	
@@ -211,36 +229,22 @@ int main()
 
 			Vector LocalCamera = GetCamPos(localent);
 			Vector ViewAngles = GetViewAngles(localent);
+			QAngle ViewAnglesA = GetViewAnglesA(localent);
 			Vector FeetPosition = GetEntityBasePosition(centity);
 			Vector HeadPosition = GetEntityBonePosition(centity, 8, FeetPosition);
-			Vector CalculatedAngles = *(Vector*)(&(Math::CalcAngle(LocalCamera, HeadPosition)));
-			Vector Delta = (CalculatedAngles - ViewAngles);
-			
-			Vector blank = { 0, 0, 0 };
-			if (vec == blank) 
+			QAngle angle = Math::CalcAngle(LocalCamera, HeadPosition);
+
+			float fov = Math::GetFov(ViewAnglesA, angle);
+
+			if (fov < max)
 			{
-				vec = Delta;
+				max = fov;
+				aimentity = centity;
 			}
-			else 
-			{
-				/*float first = abs(CalculatedAngles.x) + abs(CalculatedAngles.y);
-				float second = abs(vec.x) + abs(vec.y);*/
-				/*float first = abs(Delta.y) + abs(Delta.x);
-				float second = abs(vec.y) + abs(vec.x);*/
-
-				float first = (abs(Delta.y) + abs(Delta.x)) / 2;
-				float second = (abs(vec.y) + abs(vec.x)) / 2;
-
-				if (first < second) 
-				{
-					vec = Delta;
-					aimentity = centity;
-				}
-			}			
 		}
 		g_Locked = false;
 	}
-
+	
 	Console::Debug("Deinitializing...");
 	driver::deinitialize();
 

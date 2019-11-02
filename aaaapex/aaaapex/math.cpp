@@ -138,7 +138,7 @@ void Math::VectorTransform(const Vector& in1, const matrix3x4_t& in2, Vector& ou
 	out.z = DotProduct(in1, in2[2]) + in2[2][3];
 }
 
-QAngle Math::CalcAngle(const Vector& src, const Vector& dst)
+/*QAngle Math::CalcAngle(const Vector& src, const Vector& dst)
 {
 	QAngle angles;
 	Vector delta = src - dst;
@@ -148,5 +148,21 @@ QAngle Math::CalcAngle(const Vector& src, const Vector& dst)
 	delta.Normalize();
 
 	return angles;
-}
+}*/
 
+QAngle Math::CalcAngle(const Vector& src, const Vector& dst)
+{
+	QAngle srca = { src.x, src.y, src.z };
+	QAngle dsta = { dst.x, dst.y, dst.z };
+	
+	QAngle angle;
+	QAngle delta = srca - dsta;
+
+	double hyp = sqrtf((double)(delta.x * delta.x) + (delta.y * delta.y));
+	angle.x = atan(delta.z / hyp) * 57.295779513082f;
+	angle.y = atan(delta.y / delta.x) * 57.295779513082f;
+	if (delta.x >= 0.0) angle.y += 180.0f;
+
+
+	return angle;
+}

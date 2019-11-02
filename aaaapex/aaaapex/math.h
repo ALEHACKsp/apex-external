@@ -13,5 +13,6 @@ namespace Math {
 	void VectorAngles(const Vector& forward, QAngle& angles);
 	void VectorTransform(const Vector& in1, const matrix3x4_t& in2, Vector& out);
 	QAngle CalcAngle(const Vector& src, const Vector& dst);
+	//QAngle CalcAngle(const QAngle& src, const QAngle& dst);
 	float float_rand(float min, float max);
 }

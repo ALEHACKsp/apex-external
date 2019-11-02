@@ -13,6 +13,7 @@
 
 #define OFFSET_HEALTH			0x3E0			// m_iHealth
 #define OFFSET_SHIELD			0x168			// m_shieldHealth
+#define OFFSET_NAME				0x521			// m_iName
 
 #define OFFSET_ORIGIN			0x144			// updated
 #define OFFSET_BONES			0xEE0			// updated
